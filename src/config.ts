@@ -16,6 +16,31 @@ export interface Config {
   memberMappings: MemberMapping[];
 }
 
+/**
+ * GitHub Secrets に保存された JSON 文字列を安全にパースする。
+ * Secrets は改行・タブなどの制御文字をリテラルとして保持するため、
+ * JSON 文字列値内の制御文字をエスケープしてからパースする。
+ */
+function safeParseJson<T>(raw: string, label: string): T {
+  // JSON 文字列値の外側にある改行・タブをスペースに置換し、
+  // 文字列値内部の制御文字は JSON エスケープに変換する。
+  const sanitized = raw.replace(/[\x00-\x1f]/g, (ch) => {
+    switch (ch) {
+      case "\n": return "\\n";
+      case "\r": return "\\r";
+      case "\t": return "\\t";
+      default:
+        return "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0");
+    }
+  });
+
+  try {
+    return JSON.parse(sanitized) as T;
+  } catch (e) {
+    throw new Error(`${label} is not valid JSON: ${(e as Error).message}`);
+  }
+}
+
 export function loadConfig(): Config {
   const requiredEnvVars = [
     "ASANA_ACCESS_TOKEN",
@@ -32,22 +57,16 @@ export function loadConfig(): Config {
 
   let memberMappings: MemberMapping[] = [];
   if (process.env.MEMBER_MAPPINGS) {
-    memberMappings = JSON.parse(process.env.MEMBER_MAPPINGS);
-  }
-
-  // GitHub Secrets stores multi-line JSON with literal \n characters;
-  // replace them so JSON.parse succeeds.
-  const sanitizedServiceAccountJson =
-    process.env.GOOGLE_SERVICE_ACCOUNT_JSON!.replace(/\n/g, "\\n");
-
-  // Validate that the JSON is parseable at startup
-  try {
-    JSON.parse(sanitizedServiceAccountJson);
-  } catch (e) {
-    throw new Error(
-      `GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON: ${(e as Error).message}`
+    memberMappings = safeParseJson<MemberMapping[]>(
+      process.env.MEMBER_MAPPINGS,
+      "MEMBER_MAPPINGS"
     );
   }
+
+  const serviceAccountCredentials = safeParseJson<Record<string, unknown>>(
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON!,
+    "GOOGLE_SERVICE_ACCOUNT_JSON"
+  );
 
   return {
     asana: {
@@ -56,7 +75,7 @@ export function loadConfig(): Config {
     },
     googleChat: {
       spaceId: process.env.GOOGLE_CHAT_SPACE_ID!,
-      serviceAccountJson: sanitizedServiceAccountJson,
+      serviceAccountJson: JSON.stringify(serviceAccountCredentials),
     },
     memberMappings,
   };
