@@ -35,6 +35,20 @@ export function loadConfig(): Config {
     memberMappings = JSON.parse(process.env.MEMBER_MAPPINGS);
   }
 
+  // GitHub Secrets stores multi-line JSON with literal \n characters;
+  // replace them so JSON.parse succeeds.
+  const sanitizedServiceAccountJson =
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON!.replace(/\n/g, "\\n");
+
+  // Validate that the JSON is parseable at startup
+  try {
+    JSON.parse(sanitizedServiceAccountJson);
+  } catch (e) {
+    throw new Error(
+      `GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON: ${(e as Error).message}`
+    );
+  }
+
   return {
     asana: {
       accessToken: process.env.ASANA_ACCESS_TOKEN!,
@@ -42,7 +56,7 @@ export function loadConfig(): Config {
     },
     googleChat: {
       spaceId: process.env.GOOGLE_CHAT_SPACE_ID!,
-      serviceAccountJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON!,
+      serviceAccountJson: sanitizedServiceAccountJson,
     },
     memberMappings,
   };
