@@ -18,21 +18,12 @@ export interface Config {
 
 /**
  * GitHub Secrets に保存された JSON 文字列を安全にパースする。
- * Secrets は改行・タブなどの制御文字をリテラルとして保持するため、
- * JSON 文字列値内の制御文字をエスケープしてからパースする。
+ * Secrets は複数行JSONの改行をリテラル制御文字として保持するため、
+ * JSON構造を壊さないようスペースに置換してからパースする。
+ * （JSON文字列値内の \n エスケープシーケンスは2文字 '\'+'n' なので影響しない）
  */
 function safeParseJson<T>(raw: string, label: string): T {
-  // JSON 文字列値の外側にある改行・タブをスペースに置換し、
-  // 文字列値内部の制御文字は JSON エスケープに変換する。
-  const sanitized = raw.replace(/[\x00-\x1f]/g, (ch) => {
-    switch (ch) {
-      case "\n": return "\\n";
-      case "\r": return "\\r";
-      case "\t": return "\\t";
-      default:
-        return "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0");
-    }
-  });
+  const sanitized = raw.replace(/[\x00-\x1f\x7f]/g, " ");
 
   try {
     return JSON.parse(sanitized) as T;
