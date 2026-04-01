@@ -1,0 +1,35 @@
+name: Daily Asana ToDo Post to Google Chat
+
+on:
+  schedule:
+    # 毎日 JST 9:00 (UTC 0:00) に実行
+    - cron: "0 0 * * 1-5"
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  post-todos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run ToDo poster
+        env:
+          ASANA_ACCESS_TOKEN: ${{ secrets.ASANA_ACCESS_TOKEN }}
+          ASANA_PROJECT_GID: ${{ secrets.ASANA_PROJECT_GID }}
+          GOOGLE_CHAT_SPACE_ID: ${{ secrets.GOOGLE_CHAT_SPACE_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          MEMBER_MAPPINGS: ${{ secrets.MEMBER_MAPPINGS }}
+        run: npm start
