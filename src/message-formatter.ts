@@ -31,7 +31,7 @@ function formatTask(task: AsanaTask): string {
 function formatSection(title: string, emoji: string, tasks: AsanaTask[]): string {
   if (tasks.length === 0) return "";
 
-  const lines = tasks.map(formatTask).join("\n");
+  const lines = tasks.map(formatTask).join("\n\n");
   return `${emoji} *${title}* (${tasks.length}件)\n${lines}`;
 }
 
