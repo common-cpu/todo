@@ -40,7 +40,7 @@ export function formatMessageForAssignee(assignee: AssigneeTasks): string {
 
   // Mention
   const mention = assignee.googleChatUserId
-    ? `<users/${assignee.googleChatUserId}>`
+    ? `<${assignee.googleChatUserId}>`
     : assignee.assigneeName;
 
   const header = `📋 *Provia ToDo 日次レポート* — ${today}\n👤 担当: ${mention}\n${"─".repeat(30)}`;
