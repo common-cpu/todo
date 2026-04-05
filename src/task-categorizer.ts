@@ -6,7 +6,6 @@ import {
   isEqual,
   isAfter,
   startOfWeek,
-  endOfWeek,
   parseISO,
 } from "date-fns";
 import { AsanaTask, CategorizedTasks, AssigneeTasks } from "./types";
@@ -17,7 +16,6 @@ export function categorizeTasks(
   memberMappings: MemberMapping[]
 ): AssigneeTasks[] {
   const today = startOfDay(new Date());
-  const todayEnd = endOfDay(today);
   const threeDaysLater = endOfDay(addDays(today, 3));
   // "今週" = Monday to Friday of the current week
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
@@ -42,12 +40,12 @@ export function categorizeTasks(
       today: [],
       within3Days: [],
       thisWeek: [],
+      noDueDate: [],
     };
 
     for (const task of assigneeTasks) {
       if (!task.due_on) {
-        // Tasks without a due date are included in "thisWeek" as a catch-all
-        categories.thisWeek.push(task);
+        categories.noDueDate.push(task);
         continue;
       }
 
@@ -72,7 +70,7 @@ export function categorizeTasks(
         // This week (Mon-Fri) but not already categorized above
         categories.thisWeek.push(task);
       }
-      // Tasks beyond this week are not posted
+      // Tasks beyond this week with a due date are not posted per the spec
     }
 
     // Only include assignees who have at least one task in any category
@@ -80,7 +78,8 @@ export function categorizeTasks(
       categories.overdue.length > 0 ||
       categories.today.length > 0 ||
       categories.within3Days.length > 0 ||
-      categories.thisWeek.length > 0;
+      categories.thisWeek.length > 0 ||
+      categories.noDueDate.length > 0;
 
     if (!hasAnyTasks) continue;
 
