@@ -23,7 +23,6 @@ export interface CategorizedTasks {
   today: AsanaTask[];
   within3Days: AsanaTask[];
   thisWeek: AsanaTask[];
-  noDueDate: AsanaTask[];
 }
 
 export interface AssigneeTasks {

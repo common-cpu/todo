@@ -40,12 +40,11 @@ export function categorizeTasks(
       today: [],
       within3Days: [],
       thisWeek: [],
-      noDueDate: [],
     };
 
     for (const task of assigneeTasks) {
       if (!task.due_on) {
-        categories.noDueDate.push(task);
+        // 期限未設定のタスクはポスト対象外
         continue;
       }
 
@@ -78,8 +77,7 @@ export function categorizeTasks(
       categories.overdue.length > 0 ||
       categories.today.length > 0 ||
       categories.within3Days.length > 0 ||
-      categories.thisWeek.length > 0 ||
-      categories.noDueDate.length > 0;
+      categories.thisWeek.length > 0;
 
     if (!hasAnyTasks) continue;
 
