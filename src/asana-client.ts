@@ -39,8 +39,26 @@ export class AsanaClient {
     return response.json() as Promise<AsanaApiResponse<T>>;
   }
 
+  private mapTask(raw: any): AsanaTask {
+    return {
+      gid: raw.gid,
+      name: raw.name,
+      due_on: raw.due_on || null,
+      completed: raw.completed,
+      assignee: raw.assignee
+        ? { gid: raw.assignee.gid, name: raw.assignee.name }
+        : null,
+      parent: raw.parent
+        ? { gid: raw.parent.gid, name: raw.parent.name }
+        : null,
+      dependencies: [],
+      permalink_url: raw.permalink_url || "",
+    };
+  }
+
   async fetchIncompleteTasks(): Promise<AsanaTask[]> {
     const tasks: AsanaTask[] = [];
+    const parentGidsWithSubtasks: string[] = [];
     const optFields = [
       "name",
       "due_on",
@@ -50,11 +68,12 @@ export class AsanaClient {
       "parent.gid",
       "parent.name",
       "permalink_url",
+      "num_subtasks",
     ].join(",");
 
     let offset: string | undefined;
 
-    // Paginate through all tasks
+    // Step 1: Fetch tasks directly in the project
     do {
       const params: Record<string, string> = {
         completed_since: "now",
@@ -70,30 +89,63 @@ export class AsanaClient {
 
       for (const task of response.data) {
         if (!task.completed) {
-          tasks.push({
-            gid: task.gid,
-            name: task.name,
-            due_on: task.due_on || null,
-            completed: task.completed,
-            assignee: task.assignee
-              ? { gid: task.assignee.gid, name: task.assignee.name }
-              : null,
-            parent: task.parent
-              ? { gid: task.parent.gid, name: task.parent.name }
-              : null,
-            dependencies: [],
-            permalink_url: task.permalink_url || "",
-          });
+          tasks.push(this.mapTask(task));
+          if ((task.num_subtasks ?? 0) > 0) {
+            parentGidsWithSubtasks.push(task.gid);
+          }
         }
       }
 
       offset = response.next_page?.offset;
     } while (offset);
 
-    // Fetch dependencies for each task
+    // Step 2: Fetch subtasks for parent tasks and merge
+    const existingGids = new Set(tasks.map((t) => t.gid));
+    await this.fetchAndMergeSubtasks(
+      parentGidsWithSubtasks,
+      tasks,
+      existingGids
+    );
+
+    // Step 3: Fetch dependencies for each task
     await this.enrichWithDependencies(tasks);
 
     return tasks;
+  }
+
+  private async fetchAndMergeSubtasks(
+    parentGids: string[],
+    tasks: AsanaTask[],
+    existingGids: Set<string>
+  ): Promise<void> {
+    const optFields = [
+      "name",
+      "due_on",
+      "completed",
+      "assignee.gid",
+      "assignee.name",
+      "parent.gid",
+      "parent.name",
+      "permalink_url",
+    ].join(",");
+
+    for (const parentGid of parentGids) {
+      try {
+        const response = await this.request<any[]>(
+          `/tasks/${parentGid}/subtasks`,
+          { opt_fields: optFields }
+        );
+
+        for (const task of response.data) {
+          if (!task.completed && !existingGids.has(task.gid)) {
+            tasks.push(this.mapTask(task));
+            existingGids.add(task.gid);
+          }
+        }
+      } catch {
+        // Skip if subtasks can't be fetched
+      }
+    }
   }
 
   private async enrichWithDependencies(tasks: AsanaTask[]): Promise<void> {
