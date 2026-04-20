@@ -7,7 +7,7 @@ function formatTask(task: AsanaTask): string {
     ? format(parseISO(task.due_on), "M/d (EEE)", { locale: ja })
     : "期限なし";
 
-  let line = `  • *${task.name}*  〔期限: ${dueStr}〕`;
+  let line = `  • *${task.name}*  〔${task.project.name} / 期限: ${dueStr}〕`;
 
   // Parent task info
   if (task.parent) {
@@ -28,7 +28,11 @@ function formatTask(task: AsanaTask): string {
   return line;
 }
 
-function formatSection(title: string, emoji: string, tasks: AsanaTask[]): string {
+function formatSection(
+  title: string,
+  emoji: string,
+  tasks: AsanaTask[]
+): string {
   if (tasks.length === 0) return "";
 
   const lines = tasks.map(formatTask).join("\n\n");
@@ -43,13 +47,11 @@ export function formatMessageForAssignee(assignee: AssigneeTasks): string {
     ? `<${assignee.googleChatUserId}>`
     : assignee.assigneeName;
 
-  const header = `📋 *Provia ToDo 日次レポート* — ${today}\n👤 担当: ${mention}\n${"─".repeat(30)}`;
+  const header = `📋 *ToDo 日次レポート* — ${today}\n👤 担当: ${mention}\n${"─".repeat(30)}`;
 
   const sections = [
     formatSection("🚨 期限切れ", "🔴", assignee.categories.overdue),
     formatSection("📌 本日期限", "🟡", assignee.categories.today),
-    formatSection("⏰ 3日以内期限", "🟠", assignee.categories.within3Days),
-    formatSection("📅 今週期限", "🔵", assignee.categories.thisWeek),
   ].filter(Boolean);
 
   if (sections.length === 0) {

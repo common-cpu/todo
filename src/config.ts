@@ -1,3 +1,5 @@
+import { AsanaProject } from "./types";
+
 export interface MemberMapping {
   asanaUserId: string;
   asanaUserName: string;
@@ -7,7 +9,7 @@ export interface MemberMapping {
 export interface Config {
   asana: {
     accessToken: string;
-    projectGid: string;
+    projects: AsanaProject[];
   };
   googleChat: {
     spaceId: string;
@@ -35,7 +37,7 @@ function safeParseJson<T>(raw: string, label: string): T {
 export function loadConfig(): Config {
   const requiredEnvVars = [
     "ASANA_ACCESS_TOKEN",
-    "ASANA_PROJECT_GID",
+    "ASANA_PROJECTS",
     "GOOGLE_CHAT_SPACE_ID",
     "GOOGLE_SERVICE_ACCOUNT_JSON",
   ] as const;
@@ -43,6 +45,23 @@ export function loadConfig(): Config {
   for (const envVar of requiredEnvVars) {
     if (!process.env[envVar]) {
       throw new Error(`Missing required environment variable: ${envVar}`);
+    }
+  }
+
+  const projects = safeParseJson<AsanaProject[]>(
+    process.env.ASANA_PROJECTS!,
+    "ASANA_PROJECTS"
+  );
+
+  if (!Array.isArray(projects) || projects.length === 0) {
+    throw new Error("ASANA_PROJECTS must be a non-empty JSON array");
+  }
+
+  for (const p of projects) {
+    if (!p.gid || !p.name) {
+      throw new Error(
+        "Each entry in ASANA_PROJECTS must have both 'gid' and 'name'"
+      );
     }
   }
 
@@ -62,7 +81,7 @@ export function loadConfig(): Config {
   return {
     asana: {
       accessToken: process.env.ASANA_ACCESS_TOKEN!,
-      projectGid: process.env.ASANA_PROJECT_GID!,
+      projects,
     },
     googleChat: {
       spaceId: process.env.GOOGLE_CHAT_SPACE_ID!,

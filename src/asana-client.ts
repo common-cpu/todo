@@ -1,4 +1,4 @@
-import { AsanaTask } from "./types";
+import { AsanaProject, AsanaTask } from "./types";
 import { Config } from "./config";
 
 interface AsanaApiResponse<T> {
@@ -8,15 +8,18 @@ interface AsanaApiResponse<T> {
 
 export class AsanaClient {
   private accessToken: string;
-  private projectGid: string;
+  private projects: AsanaProject[];
   private baseUrl = "https://app.asana.com/api/1.0";
 
   constructor(config: Config) {
     this.accessToken = config.asana.accessToken;
-    this.projectGid = config.asana.projectGid;
+    this.projects = config.asana.projects;
   }
 
-  private async request<T>(path: string, params?: Record<string, string>): Promise<AsanaApiResponse<T>> {
+  private async request<T>(
+    path: string,
+    params?: Record<string, string>
+  ): Promise<AsanaApiResponse<T>> {
     const url = new URL(`${this.baseUrl}${path}`);
     if (params) {
       for (const [key, value] of Object.entries(params)) {
@@ -39,7 +42,7 @@ export class AsanaClient {
     return response.json() as Promise<AsanaApiResponse<T>>;
   }
 
-  private mapTask(raw: any): AsanaTask {
+  private mapTask(raw: any, project: AsanaProject): AsanaTask {
     return {
       gid: raw.gid,
       name: raw.name,
@@ -53,10 +56,29 @@ export class AsanaClient {
         : null,
       dependencies: [],
       permalink_url: raw.permalink_url || "",
+      project,
     };
   }
 
   async fetchIncompleteTasks(): Promise<AsanaTask[]> {
+    const allTasks: AsanaTask[] = [];
+    const existingGids = new Set<string>();
+
+    for (const project of this.projects) {
+      const tasks = await this.fetchProjectTasks(project, existingGids);
+      allTasks.push(...tasks);
+    }
+
+    // Enrich all collected tasks with dependency info at once
+    await this.enrichWithDependencies(allTasks);
+
+    return allTasks;
+  }
+
+  private async fetchProjectTasks(
+    project: AsanaProject,
+    existingGids: Set<string>
+  ): Promise<AsanaTask[]> {
     const tasks: AsanaTask[] = [];
     const parentGidsWithSubtasks: string[] = [];
     const optFields = [
@@ -83,13 +105,14 @@ export class AsanaClient {
       if (offset) params.offset = offset;
 
       const response = await this.request<any[]>(
-        `/projects/${this.projectGid}/tasks`,
+        `/projects/${project.gid}/tasks`,
         params
       );
 
       for (const task of response.data) {
-        if (!task.completed) {
-          tasks.push(this.mapTask(task));
+        if (!task.completed && !existingGids.has(task.gid)) {
+          tasks.push(this.mapTask(task, project));
+          existingGids.add(task.gid);
           if ((task.num_subtasks ?? 0) > 0) {
             parentGidsWithSubtasks.push(task.gid);
           }
@@ -100,15 +123,12 @@ export class AsanaClient {
     } while (offset);
 
     // Step 2: Fetch subtasks for parent tasks and merge
-    const existingGids = new Set(tasks.map((t) => t.gid));
     await this.fetchAndMergeSubtasks(
       parentGidsWithSubtasks,
       tasks,
-      existingGids
+      existingGids,
+      project
     );
-
-    // Step 3: Fetch dependencies for each task
-    await this.enrichWithDependencies(tasks);
 
     return tasks;
   }
@@ -116,7 +136,8 @@ export class AsanaClient {
   private async fetchAndMergeSubtasks(
     parentGids: string[],
     tasks: AsanaTask[],
-    existingGids: Set<string>
+    existingGids: Set<string>,
+    project: AsanaProject
   ): Promise<void> {
     const optFields = [
       "name",
@@ -138,7 +159,7 @@ export class AsanaClient {
 
         for (const task of response.data) {
           if (!task.completed && !existingGids.has(task.gid)) {
-            tasks.push(this.mapTask(task));
+            tasks.push(this.mapTask(task, project));
             existingGids.add(task.gid);
           }
         }

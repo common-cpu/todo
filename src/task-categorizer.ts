@@ -1,13 +1,4 @@
-import {
-  startOfDay,
-  endOfDay,
-  addDays,
-  isBefore,
-  isEqual,
-  isAfter,
-  startOfWeek,
-  parseISO,
-} from "date-fns";
+import { startOfDay, isBefore, isEqual, parseISO } from "date-fns";
 import { AsanaTask, CategorizedTasks, AssigneeTasks } from "./types";
 import { MemberMapping } from "./config";
 
@@ -16,10 +7,6 @@ export function categorizeTasks(
   memberMappings: MemberMapping[]
 ): AssigneeTasks[] {
   const today = startOfDay(new Date());
-  const threeDaysLater = endOfDay(addDays(today, 3));
-  // "今週" = Monday to Friday of the current week
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
-  const weekEnd = endOfDay(addDays(weekStart, 4)); // Friday
 
   // Group tasks by assignee
   const assigneeMap = new Map<string, AsanaTask[]>();
@@ -38,8 +25,6 @@ export function categorizeTasks(
     const categories: CategorizedTasks = {
       overdue: [],
       today: [],
-      within3Days: [],
-      thisWeek: [],
     };
 
     for (const task of assigneeTasks) {
@@ -56,33 +41,17 @@ export function categorizeTasks(
       } else if (isEqual(dueDate, today)) {
         // Due today
         categories.today.push(task);
-      } else if (
-        isAfter(dueDate, today) &&
-        (isBefore(dueDate, threeDaysLater) || isEqual(dueDate, startOfDay(threeDaysLater)))
-      ) {
-        // Within 3 days (excluding today, already handled above)
-        categories.within3Days.push(task);
-      } else if (
-        (isAfter(dueDate, weekStart) || isEqual(dueDate, weekStart)) &&
-        (isBefore(dueDate, weekEnd) || isEqual(dueDate, startOfDay(weekEnd)))
-      ) {
-        // This week (Mon-Fri) but not already categorized above
-        categories.thisWeek.push(task);
       }
-      // Tasks beyond this week with a due date are not posted per the spec
+      // 3日以内・今週期限などは対象外（期限切れと本日期限のみ通知）
     }
 
     // Only include assignees who have at least one task in any category
     const hasAnyTasks =
-      categories.overdue.length > 0 ||
-      categories.today.length > 0 ||
-      categories.within3Days.length > 0 ||
-      categories.thisWeek.length > 0;
+      categories.overdue.length > 0 || categories.today.length > 0;
 
     if (!hasAnyTasks) continue;
 
-    const assigneeName =
-      assigneeTasks[0]?.assignee?.name ?? "未割り当て";
+    const assigneeName = assigneeTasks[0]?.assignee?.name ?? "未割り当て";
     const mapping = memberMappings.find((m) => m.asanaUserId === assigneeId);
 
     result.push({

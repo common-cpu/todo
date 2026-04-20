@@ -1,3 +1,8 @@
+export interface AsanaProject {
+  gid: string;
+  name: string;
+}
+
 export interface AsanaTask {
   gid: string;
   name: string;
@@ -16,13 +21,12 @@ export interface AsanaTask {
     name: string;
   }>;
   permalink_url: string;
+  project: AsanaProject;
 }
 
 export interface CategorizedTasks {
   overdue: AsanaTask[];
   today: AsanaTask[];
-  within3Days: AsanaTask[];
-  thisWeek: AsanaTask[];
 }
 
 export interface AssigneeTasks {
