@@ -1,4 +1,12 @@
-import { startOfDay, isBefore, isEqual, parseISO } from "date-fns";
+import {
+  startOfDay,
+  isBefore,
+  isEqual,
+  isAfter,
+  parseISO,
+  addDays,
+  startOfWeek,
+} from "date-fns";
 import { AsanaTask, CategorizedTasks, AssigneeTasks } from "./types";
 import { MemberMapping } from "./config";
 
@@ -7,8 +15,10 @@ export function categorizeTasks(
   memberMappings: MemberMapping[]
 ): AssigneeTasks[] {
   const today = startOfDay(new Date());
+  const threeDaysFromToday = addDays(today, 3);
+  const mondayOfThisWeek = startOfWeek(today, { weekStartsOn: 1 });
+  const fridayOfThisWeek = addDays(mondayOfThisWeek, 4);
 
-  // Group tasks by assignee
   const assigneeMap = new Map<string, AsanaTask[]>();
 
   for (const task of tasks) {
@@ -25,29 +35,34 @@ export function categorizeTasks(
     const categories: CategorizedTasks = {
       overdue: [],
       today: [],
+      withinThreeDays: [],
+      thisWeek: [],
     };
 
     for (const task of assigneeTasks) {
-      if (!task.due_on) {
-        // 期限未設定のタスクはポスト対象外
-        continue;
-      }
+      if (!task.due_on) continue;
 
       const dueDate = startOfDay(parseISO(task.due_on));
 
       if (isBefore(dueDate, today)) {
-        // Overdue: due date is before today
         categories.overdue.push(task);
       } else if (isEqual(dueDate, today)) {
-        // Due today
         categories.today.push(task);
+      } else if (!isAfter(dueDate, threeDaysFromToday)) {
+        categories.withinThreeDays.push(task);
+      } else if (
+        !isBefore(dueDate, mondayOfThisWeek) &&
+        !isAfter(dueDate, fridayOfThisWeek)
+      ) {
+        categories.thisWeek.push(task);
       }
-      // 3日以内・今週期限などは対象外（期限切れと本日期限のみ通知）
     }
 
-    // Only include assignees who have at least one task in any category
     const hasAnyTasks =
-      categories.overdue.length > 0 || categories.today.length > 0;
+      categories.overdue.length > 0 ||
+      categories.today.length > 0 ||
+      categories.withinThreeDays.length > 0 ||
+      categories.thisWeek.length > 0;
 
     if (!hasAnyTasks) continue;
 

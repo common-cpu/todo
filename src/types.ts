@@ -27,6 +27,8 @@ export interface AsanaTask {
 export interface CategorizedTasks {
   overdue: AsanaTask[];
   today: AsanaTask[];
+  withinThreeDays: AsanaTask[];
+  thisWeek: AsanaTask[];
 }
 
 export interface AssigneeTasks {
