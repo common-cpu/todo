@@ -54,6 +54,7 @@ export function formatMessageForAssignee(assignee: AssigneeTasks): string {
     formatSection("📌 本日期限", "🟡", assignee.categories.today),
     formatSection("⏰ ３日以内期限", "🟠", assignee.categories.withinThreeDays),
     formatSection("📅 今週期限", "🔵", assignee.categories.thisWeek),
+    formatSection("📝 期限未設定", "⚪", assignee.categories.noDueDate),
   ].filter(Boolean);
 
   if (sections.length === 0) {

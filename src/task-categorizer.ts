@@ -37,10 +37,14 @@ export function categorizeTasks(
       today: [],
       withinThreeDays: [],
       thisWeek: [],
+      noDueDate: [],
     };
 
     for (const task of assigneeTasks) {
-      if (!task.due_on) continue;
+      if (!task.due_on) {
+        categories.noDueDate.push(task);
+        continue;
+      }
 
       const dueDate = startOfDay(parseISO(task.due_on));
 
@@ -62,7 +66,8 @@ export function categorizeTasks(
       categories.overdue.length > 0 ||
       categories.today.length > 0 ||
       categories.withinThreeDays.length > 0 ||
-      categories.thisWeek.length > 0;
+      categories.thisWeek.length > 0 ||
+      categories.noDueDate.length > 0;
 
     if (!hasAnyTasks) continue;
 
