@@ -50,10 +50,10 @@ export function formatMessageForAssignee(assignee: AssigneeTasks): string {
   const header = `📋 *ToDo 日次レポート* — ${today}\n👤 担当: ${mention}\n${"─".repeat(30)}`;
 
   const sections = [
-    formatSection("🚨 期限切れ", "🔴", assignee.categories.overdue),
-    formatSection("📌 本日期限", "🟡", assignee.categories.today),
-    formatSection("⏰ ３日以内期限", "🟠", assignee.categories.withinThreeDays),
-    formatSection("📅 今週期限", "🔵", assignee.categories.thisWeek),
+    formatSection("期限切れ", "🔴", assignee.categories.overdue),
+    formatSection("本日期限", "🟡", assignee.categories.today),
+    formatSection("３日以内期限", "🟠", assignee.categories.withinThreeDays),
+    formatSection("今週期限", "🔵", assignee.categories.thisWeek),
   ].filter(Boolean);
 
   if (sections.length === 0) {
