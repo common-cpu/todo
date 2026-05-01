@@ -27,6 +27,7 @@ jobs:
 
       - name: Run ToDo poster
         env:
+          TZ: Asia/Tokyo
           ASANA_ACCESS_TOKEN: ${{ secrets.ASANA_ACCESS_TOKEN }}
           ASANA_PROJECTS: ${{ secrets.ASANA_PROJECTS }}
           GOOGLE_CHAT_SPACE_ID: ${{ secrets.GOOGLE_CHAT_SPACE_ID }}
