@@ -3,7 +3,7 @@ name: Daily Asana ToDo Post to Google Chat
 on:
   schedule:
     # 毎日 JST 9:00 (UTC 0:00) に実行
-    - cron: "0 0 * * *"
+    - cron: "0 0 * * 1-5"
   workflow_dispatch: # 手動実行も可能
 
 jobs:
@@ -29,8 +29,7 @@ jobs:
         env:
           TZ: Asia/Tokyo
           ASANA_ACCESS_TOKEN: ${{ secrets.ASANA_ACCESS_TOKEN }}
-          ASANA_PROJECTS: ${{ secrets.ASANA_PROJECTS || '[{"gid":"1214016121056319","name":"Provia"}]' }}
-          GOOGLE_CHAT_SPACE_ID: ${{ secrets.GOOGLE_CHAT_SPACE_ID }}
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          ASANA_PROJECTS: ${{ secrets.ASANA_PROJECTS || '[{"gid":"1214016121056319","name":"Provia"},{"gid":"1214016121056325","name":"Blueship"},{"gid":"1214016121056331","name":"BlueVoyant"},{"gid":"1214016121056337","name":"DataArt"},{"gid":"1214023936100425","name":"ZIPAIR Tokyo"}]' }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
           MEMBER_MAPPINGS: ${{ secrets.MEMBER_MAPPINGS }}
         run: npm start

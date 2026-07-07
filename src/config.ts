@@ -12,18 +12,11 @@ export interface Config {
     projects: AsanaProject[];
   };
   googleChat: {
-    spaceId: string;
-    serviceAccountJson: string;
+    webhookUrl: string;
   };
   memberMappings: MemberMapping[];
 }
 
-/**
- * GitHub Secrets に保存された JSON 文字列を安全にパースする。
- * Secrets は複数行JSONの改行をリテラル制御文字として保持するため、
- * JSON構造を壊さないようスペースに置換してからパースする。
- * （JSON文字列値内の \n エスケープシーケンスは2文字 '\'+'n' なので影響しない）
- */
 function safeParseJson<T>(raw: string, label: string): T {
   const sanitized = raw.replace(/[\x00-\x1f\x7f]/g, " ");
 
@@ -38,8 +31,7 @@ export function loadConfig(): Config {
   const requiredEnvVars = [
     "ASANA_ACCESS_TOKEN",
     "ASANA_PROJECTS",
-    "GOOGLE_CHAT_SPACE_ID",
-    "GOOGLE_SERVICE_ACCOUNT_JSON",
+    "GOOGLE_CHAT_WEBHOOK_URL",
   ] as const;
 
   for (const envVar of requiredEnvVars) {
@@ -73,19 +65,13 @@ export function loadConfig(): Config {
     );
   }
 
-  const serviceAccountCredentials = safeParseJson<Record<string, unknown>>(
-    process.env.GOOGLE_SERVICE_ACCOUNT_JSON!,
-    "GOOGLE_SERVICE_ACCOUNT_JSON"
-  );
-
   return {
     asana: {
       accessToken: process.env.ASANA_ACCESS_TOKEN!,
       projects,
     },
     googleChat: {
-      spaceId: process.env.GOOGLE_CHAT_SPACE_ID!,
-      serviceAccountJson: JSON.stringify(serviceAccountCredentials),
+      webhookUrl: process.env.GOOGLE_CHAT_WEBHOOK_URL!,
     },
     memberMappings,
   };
