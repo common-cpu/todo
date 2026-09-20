@@ -6,6 +6,7 @@ import {
   parseISO,
   addDays,
   startOfWeek,
+  getDay,
 } from "date-fns";
 import { AsanaTask, CategorizedTasks, AssigneeTasks } from "./types";
 import { MemberMapping } from "./config";
@@ -16,7 +17,11 @@ export function categorizeTasks(
 ): AssigneeTasks[] {
   const today = startOfDay(new Date());
   const threeDaysFromToday = addDays(today, 3);
-  const mondayOfThisWeek = startOfWeek(today, { weekStartsOn: 1 });
+  const dayOfWeek = getDay(today);
+  let mondayOfThisWeek = startOfWeek(today, { weekStartsOn: 1 });
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    mondayOfThisWeek = addDays(mondayOfThisWeek, 7);
+  }
   const fridayOfThisWeek = addDays(mondayOfThisWeek, 4);
 
   const assigneeMap = new Map<string, AsanaTask[]>();
