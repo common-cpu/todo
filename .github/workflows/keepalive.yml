@@ -1,0 +1,13 @@
+name: Keep Alive
+
+on:
+  schedule:
+    # 毎月1日 UTC 00:00 に実行して、GitHub Actionsの自動無効化を防止
+    - cron: "0 0 1 * *"
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep workflows alive
+        run: echo "Keepalive ping at $(date -u)"
